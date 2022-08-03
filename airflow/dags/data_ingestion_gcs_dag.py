@@ -14,9 +14,10 @@ import pyarrow.parquet as pq
 PROJECT_ID = os.environ.get("GCP_PROJECT_ID")
 BUCKET = os.environ.get("GCP_GCS_BUCKET")
 
-dataset_file = "covid_cases.csv"
-dataset_url = f"https://storage.cloud.google.com/dtc_data_lake_de-bootcamp-357803/{dataset_file}"
-path_to_local_home = os.environ("AIRFLOW_HOME", "/opt/airflow/")
+dataset_file = "covid-cases.csv"
+# dataset_url = f"https://storage.cloud.google.com/dtc_data_lake_de-bootcamp-357803/{dataset_file}"
+dataset_url = f"https://storage.googleapis.com/dtc_data_lake_de-bootcamp-357803/{dataset_file}"
+path_to_local_home = os.environ.get("AIRFLOW_HOME", "/opt/airflow/")
 parquet_file = dataset_file.replace(".csv", ".parquet")
 BIGQUERY_DATASET = os.environ.get("BIGQUERY_DATASET", "covid_data_all")
 
@@ -25,7 +26,7 @@ def format_to_parquet(src_file):
         logging.error("Can only accept source files in CSV format")
         return
     table = pv.read_csv(src_file)
-    pq.write_table(table, src_file)
+    pq.write_table(table, src_file.replace('.csv', '.parquet'))
 
 def upload_to_gcs(bucket, object_name, local_file):
     # To prevent timeout for files > 6MB on 888Kbps upload speed
@@ -70,7 +71,7 @@ with DAG(
         task_id="local_to_gcs_task",
         python_callable=upload_to_gcs,
         op_kwargs={
-            "bucket": BUCKET
+            "bucket": BUCKET,
             "object_name": f"raw/{parquet_file}",
             "local_file": f"{path_to_local_home}/{parquet_file}"
         }

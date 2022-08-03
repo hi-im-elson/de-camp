@@ -24,7 +24,7 @@
 # The following variables are supported:
 #
 # AIRFLOW_IMAGE_NAME           - Docker image name used to run Airflow.
-#                                Default: apache/airflow:2.3.3
+#                                Default: apache/airflow:2.2.3
 # AIRFLOW_UID                  - User ID in Airflow containers
 #                                Default: 50000
 # Those configurations are useful mostly in case of standalone testing/running Airflow in test/try-out mode
@@ -38,7 +38,7 @@
 #
 # Feel free to modify this file to suit your needs.
 ---
-version: '3.3'
+version: '3'
 x-airflow-common:
   &airflow-common
   # In order to add custom dependencies or upgrade provider packages you can use your extended image.
@@ -60,13 +60,17 @@ x-airflow-common:
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
     GOOGLE_APPLICATION_CREDENTIALS: /.google/credentials/google_credentials.json
     AIRFLOW_CONN_GOOGLE_CLOUD_DEFAULT: 'google-cloud-platform://?extra__google_cloud_platform__key_path=/.google/credentials/google_credentials.json'
-    GCP_PROJECT_ID: "de-bootcamp-357803"
-    GCP_GCS_BUCKET: "dtc_data_lake_de-bootcamp-357803 "
+
+    # TODO: Please change GCP_PROJECT_ID & GCP_GCS_BUCKET, as per your config
+    GCP_PROJECT_ID: 'de-bootcamp-357803'
+    GCP_GCS_BUCKET: 'dtc_data_lake_de-bootcamp-357803'
 
   volumes:
     - ./dags:/opt/airflow/dags
     - ./logs:/opt/airflow/logs
     - ./plugins:/opt/airflow/plugins
+    - ~/.google/credentials/:/.google/credentials:ro
+
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
     &airflow-common-depends-on
@@ -176,7 +180,7 @@ services:
         function ver() {
           printf "%04d%04d%04d%04d" $${1//./ }
         }
-        airflow_version=$$(AIRFLOW__LOGGING__LOGGING_LEVEL=INFO && gosu airflow airflow version)
+        airflow_version=$$(gosu airflow airflow version)
         airflow_version_comparable=$$(ver $${airflow_version})
         min_airflow_version=2.2.0
         min_airflow_version_comparable=$$(ver $${min_airflow_version})
@@ -239,7 +243,6 @@ services:
       _AIRFLOW_WWW_USER_CREATE: 'true'
       _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-airflow}
       _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-airflow}
-      _PIP_ADDITIONAL_REQUIREMENTS: ''
     user: "0:0"
     volumes:
       - .:/sources
@@ -257,14 +260,9 @@ services:
       - -c
       - airflow
 
-  # You can enable flower by adding "--profile flower" option e.g. docker-compose --profile flower up
-  # or by explicitly targeted on the command line e.g. docker-compose up flower.
-  # See: https://docs.docker.com/compose/profiles/
   flower:
     <<: *airflow-common
     command: celery flower
-    profiles:
-      - flower
     ports:
       - 5555:5555
     healthcheck:
